@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: rag-fastapi
+    env: docker
+    plan: starter
+    autoDeploy: true
+
+    # Build from your Dockerfile at repo root
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    # Render exposes $PORT; our app reads it in CMD from the Dockerfile
+    healthCheckPath: /health
+    # Health check timeout in seconds (optional)
+    healthCheckTimeout: 30
+
+    # Environment variables available at runtime
+    envVars:
+      # Optional: set only if you call provider="gemini"
+      - key: GEMINI_API_KEY
+        sync: false   # create it as a secret in the Render dashboard
+
+      # Allow your frontend origin(s); use comma-separated list if multiple
+      - key: ALLOWED_ORIGINS
+        value: "*"
+
+      # Where your dataset lives inside the container
+      - key: DATA_JSON_PATH
+        value: "wiki_dataset.json"
+
+      # Where the FAISS index + chunks are stored in the image
+      - key: INDEX_DIR
+        value: "index"
+
+      # Uvicorn will read this automatically from Render, but keep a default
+      - key: PORT
+        value: "8000"
+
+    # Optional scaling (Starter = 512MB/0.5 vCPU). Adjust if needed.
+    # numInstances: 1
+    # region: oregon
+
+# --- Optional: scheduled reindex if you skip build-time `RUN python load.py`
+# jobs:
+#   - type: cron
+#     name: rag-reindex
+#     schedule: "0 6 * * *" # every day at 06:00 UTC
+#     env: docker
+#     dockerfilePath: ./Dockerfile
+#     dockerContext: .
+#     # Call the internal /reindex (service must be reachable; for private,
+#     # add an internal auth token and pass it via env var)
+#     startCommand: 'bash -lc "curl -X POST http://localhost:${PORT}/reindex || true"'
